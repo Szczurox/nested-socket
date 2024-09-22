@@ -25,12 +25,11 @@ io.use(function (socket, next) {
 		);
 	} else return next(new Error("Authentication error"));
 }).on("connection", (socket) => {
-	console.log("Connection! ->", socket.id);
-
 	const uid = socket.decoded.uid;
 	const channel = socket.decoded.channel;
 	const username = socket.decoded.username;
-	const avatar = socket.decoded.avatar;
+
+	console.log(`(${channel}): ${socket.id} -> Connected!`);
 
 	const room = rooms.get(channel);
 
@@ -39,21 +38,27 @@ io.use(function (socket, next) {
 		rooms.set(channel, room);
 	} else rooms.set(channel, [socket.id]);
 
-	console.log("Welcome", socket.decoded.username);
+	console.log(`(${channel}): Welcome ${username}!`);
 
-	socket.on("get clients", (payload) => {
+	socket.on("get clients", () => {
+		console.log(`(${channel}): ${socket.id} -> Getting participants`);
 		socket.emit("all clients", room ? room : {});
 	});
 
 	socket.on("sending signal", (payload) => {
-		console.log("niggerlicious", payload.clientToSignal);
+		console.log(
+			`(${channel}): ${payload.callerID} -> ${payload.clientToSignal}: Sending signal`
+		);
 		io.to(payload.clientToSignal).emit("joined", {
 			signal: payload.signal,
-			callerID: payload.callerID,
+			id: socket.id,
 		});
 	});
 
 	socket.on("returning signal", (payload) => {
+		console.log(
+			`(${channel}): ${socket.id} -> ${payload.callerID}: Returning signal`
+		);
 		io.to(payload.callerID).emit("returned signal", {
 			signal: payload.signal,
 			id: socket.id,
@@ -61,13 +66,12 @@ io.use(function (socket, next) {
 	});
 
 	socket.on("disconnect", () => {
-		console.log("disconnected");
-		console.log(rooms);
-		rooms.set(
-			channel,
-			rooms.get(channel).filter((el) => el != socket.id)
-		);
-		console.log(rooms);
+		console.log(`(${channel}): ${socket.id} -> Disconnected!`);
+		const newChannel = rooms.get(channel).filter((el) => el != socket.id);
+		rooms.set(channel, newChannel);
+		newChannel.forEach((clientID) => {
+			io.to(clientID).emit("left", { id: socket.id });
+		});
 	});
 });
 
