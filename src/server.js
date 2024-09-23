@@ -12,6 +12,19 @@ app.use(express.static("public"));
 
 let rooms = new Map();
 
+async function disconnect(group, channel, token) {
+	const res = await fetch(
+		`${process.env.DEV_ORIGIN}/api/disconnect-peer?group=${group}&channel=${channel}`,
+		{
+			method: "post",
+			headers: {
+				"authorization": `${token}`,
+			},
+		}
+	);
+	console.log(res);
+}
+
 io.use(function (socket, next) {
 	if (socket.handshake.auth && socket.handshake.auth.token) {
 		jwt.verify(
@@ -25,7 +38,9 @@ io.use(function (socket, next) {
 		);
 	} else return next(new Error("Authentication error"));
 }).on("connection", (socket) => {
+	const token = socket.decoded.token;
 	const uid = socket.decoded.uid;
+	const group = socket.decoded.group;
 	const channel = socket.decoded.channel;
 	const username = socket.decoded.username;
 
@@ -72,6 +87,7 @@ io.use(function (socket, next) {
 		newChannel.forEach((clientID) => {
 			io.to(clientID).emit("left", { id: socket.id });
 		});
+		disconnect(group, channel, token);
 	});
 });
 
