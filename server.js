@@ -5,16 +5,23 @@ const app = express();
 const server = require("http").Server(app);
 const io = require("socket.io")(server, {
 	cors: true,
-	origins: [process.env.ORIGIN, process.env.DEV_ORIGIN],
+	origins: [
+		process.env.NODE_ENV ? process.env.ORIGIN : process.env.DEV_ORIGIN,
+	],
 });
 
 app.use(express.static("public"));
 
+console.log(process.env.NODE_ENV);
+
 let rooms = new Map();
 
 async function disconnect(group, channel, token) {
+	console.log(process.env.NODE_ENV);
 	const res = await fetch(
-		`${process.env.DEV_ORIGIN}/api/disconnect-peer?group=${group}&channel=${channel}`,
+		`${
+			process.env.NODE_ENV ? process.env.ORIGIN : process.env.DEV_ORIGIN
+		}/api/disconnect-peer?group=${group}&channel=${channel}`,
 		{
 			method: "post",
 			headers: {
