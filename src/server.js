@@ -22,7 +22,6 @@ async function disconnect(group, channel, token) {
 			},
 		}
 	);
-	console.log(res);
 }
 
 io.use(function (socket, next) {
@@ -81,13 +80,13 @@ io.use(function (socket, next) {
 	});
 
 	socket.on("disconnect", () => {
-		console.log(`(${channel}): ${socket.id} -> Disconnected!`);
 		const newChannel = rooms.get(channel).filter((el) => el != socket.id);
 		rooms.set(channel, newChannel);
 		newChannel.forEach((clientID) => {
 			io.to(clientID).emit("left", { id: socket.id });
 		});
 		disconnect(group, channel, token);
+		console.log(`(${channel}): ${socket.id} -> Disconnected!`);
 	});
 });
 
